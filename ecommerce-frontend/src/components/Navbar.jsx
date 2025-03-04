@@ -3,44 +3,79 @@
 import {
   Box,
   Flex,
-  Avatar,
   HStack,
   IconButton,
   Button,
   useDisclosure,
   Stack,
   Input,
+  List,
+  ListItem,
+  Text,
+  Image,
 } from "@chakra-ui/react";
 import axios from "axios";
 import { useState } from "react";
 import { Link, Outlet, useNavigate } from "react-router-dom";
 import { debounce } from "lodash";
 
-export default function Navbar() {
+export const Navbar = () => {
   const { isOpen, onOpen, onClose } = useDisclosure();
   const [keyword, setKeyword] = useState("");
+  const [searchResults, setSearchResults] = useState([]);
+  const [imageUrls, setImageUrls] = useState({});
   const navigate = useNavigate();
 
   const fetchProducts = debounce(async (query) => {
-    if (!query) return;
+    if (!query) {
+      setSearchResults([]);
+      return;
+    }
     try {
       const response = await axios.get(
         `http://localhost:8080/api/products/search?keyword=${query}`
       );
-      console.log(response.data);
+      setSearchResults(response.data);
+
+      response.data.forEach((product) => {
+        fetchImage(product.id);
+      });
     } catch (error) {
       console.error("Error fetching products:", error);
+      setSearchResults([]);
     }
   }, 500);
 
+  const fetchImage = async (productId) => {
+    try {
+      const response = await axios.get(
+        `http://localhost:8080/api/product/${productId}/image`,
+        { responseType: "blob" }
+      );
+      const objectURL = URL.createObjectURL(response.data);
+      setImageUrls((prev) => ({ ...prev, [productId]: objectURL }));
+    } catch (error) {
+      console.error(`Error fetching image for product ${productId}:`, error);
+      setImageUrls((prev) => ({ ...prev, [productId]: "/placeholder.jpg" })); // Use default image on error
+    }
+  };
+
+  // Handle input change
   const handleChange = (e) => {
     const query = e.target.value;
     setKeyword(query);
     fetchProducts(query);
   };
 
+  // Handle search selection
+  const handleSelect = (productId) => {
+    navigate(`/product-details/${productId}`);
+    setKeyword(""); // Clear search input
+    setSearchResults([]); // Hide dropdown
+  };
+
   return (
-    <Box px={4} width={"100%"} bg={"gray.200"}>
+    <Box px={4} width={"100%"} bg={"gray.200"} position="relative">
       <Flex
         h={16}
         bgColor={"gray.200"}
@@ -62,7 +97,7 @@ export default function Navbar() {
             <Link to={"/about"}>About</Link>
           </HStack>
         </HStack>
-        <Flex alignItems={"center"}>
+        <Flex alignItems={"center"} position="relative">
           <Input
             placeholder="Search"
             size="sm"
@@ -71,7 +106,50 @@ export default function Navbar() {
             variant="subtle"
             value={keyword}
             onChange={handleChange}
+            onBlur={() => setTimeout(() => setSearchResults([]), 200)} // Close dropdown on blur
           />
+          {searchResults.length > 0 && (
+            <Box
+              position="absolute"
+              top="100%"
+              left={4}
+              bg="white"
+              boxShadow="md"
+              width="300px"
+              borderRadius="md"
+              zIndex="10"
+              maxH="250px"
+              overflowY="auto"
+            >
+              <List spacing={1}>
+                {searchResults.map((product) => (
+                  <ListItem
+                    key={product.id}
+                    display="flex"
+                    alignItems="center"
+                    gap={3}
+                    p={2}
+                    maxW={"sm"}
+                    _hover={{ bg: "gray.100", cursor: "pointer" }}
+                    onMouseDown={() => handleSelect(product.id)}
+                  >
+                    <Image
+                      src={imageUrls[product.id] || "/placeholder.jpg"}
+                      alt={product.name}
+                      boxSize="50px"
+                      objectFit="cover"
+                    />
+                    <Box>
+                      <Text fontWeight="bold">{product.name}</Text>
+                      <Text fontSize="sm" color="gray.500">
+                        {product.category}
+                      </Text>
+                    </Box>
+                  </ListItem>
+                ))}
+              </List>
+            </Box>
+          )}
           <Button
             variant={"solid"}
             colorScheme={"teal"}
@@ -95,4 +173,4 @@ export default function Navbar() {
       <Outlet />
     </Box>
   );
-}
+};

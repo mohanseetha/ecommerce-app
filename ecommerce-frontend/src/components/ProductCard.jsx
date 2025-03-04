@@ -71,12 +71,14 @@ export const ProductCard = ({ product }) => {
       <CardFooter display="flex" justifyContent="center" gap={2}>
         <Button
           variant="solid"
-          colorScheme="blue"
+          colorScheme="teal"
           onClick={() => navigate(`/product-details/${product?.id}`)}
         >
           View Details
         </Button>
-        <Button variant="outline">Add to cart</Button>
+        <Button colorScheme="teal" variant="outline">
+          Add to cart
+        </Button>
       </CardFooter>
     </Card>
   );

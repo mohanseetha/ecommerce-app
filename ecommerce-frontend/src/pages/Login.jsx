@@ -1,97 +1,133 @@
+import { useState } from "react";
 import {
   Box,
+  Button,
   FormControl,
-  Heading,
   FormLabel,
   Input,
-  Button,
+  Stack,
+  Heading,
   Text,
+  Link,
+  useToast,
 } from "@chakra-ui/react";
-import { useState } from "react";
+import { useForm } from "react-hook-form";
+import axios from "axios";
+import { useNavigate } from "react-router-dom";
+import bcrypt from "bcryptjs";
 
 export const Login = () => {
-  const [formData, setFormData] = useState({
-    email: "",
-    password: "",
-  });
+  const navigate = useNavigate();
+  const toast = useToast();
   const [loading, setLoading] = useState(false);
 
-  const handleChange = (e) => {
-    setFormData({
-      ...formData,
-      [e.target.name]: e.target.value,
-    });
-  };
+  const {
+    register,
+    handleSubmit,
+    formState: { errors },
+  } = useForm();
 
-  const handleSubmit = async (e) => {
-    e.preventDefault();
+  const onSubmit = async (data) => {
     setLoading(true);
     try {
-      const response = await fetch("http://localhost:8080/api/login", {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(formData),
-      });
-      const data = await response.json();
-      if (response.ok) {
-        console.log("Login successful:", data);
+      const res = await axios.get(
+        `http://localhost:8080/api/users/${data.username}`
+      );
+
+      if (res.data) {
+        const isMatch = await bcrypt.compare(data.password, res.data.password);
+
+        if (isMatch) {
+          toast({
+            title: "Login Successful!",
+            description: "Welcome back!",
+            status: "success",
+            duration: 3000,
+            isClosable: true,
+          });
+          navigate("/dashboard"); // Redirect on success
+        } else {
+          throw new Error("Invalid credentials");
+        }
       } else {
-        console.error("Login failed:", data);
+        throw new Error("User not found");
       }
     } catch (error) {
-      console.error("Login failed:", error);
-    } finally {
-      setLoading(false);
+      toast({
+        title: "Login Failed",
+        description: "Invalid username or password.",
+        status: "error",
+        duration: 3000,
+        isClosable: true,
+      });
+      console.error(error);
     }
+    setLoading(false);
   };
 
   return (
     <Box
-      as="form"
-      onSubmit={handleSubmit}
+      maxW={{ base: "sm", md: "2xl" }}
+      width="100%"
+      mx="auto"
+      mt={10}
+      p={6}
+      borderWidth={1}
+      borderRadius="md"
+      boxShadow="lg"
       display="flex"
       flexDirection="column"
       alignItems="center"
       justifyContent="center"
-      alignContent={"center"}
-      maxW={"lg"}
     >
-      <Heading size="lg" marginBottom="4">
+      <Heading as="h2" size="lg" textAlign="center" mb={4}>
         Login
       </Heading>
-      <FormControl id="email" isRequired>
-        <FormLabel>Email</FormLabel>
-        <Input
-          type="email"
-          name="email"
-          value={formData.email}
-          onChange={handleChange}
-        />
-      </FormControl>
-      <FormControl id="password" isRequired>
-        <FormLabel>Password</FormLabel>
-        <Input
-          type="password"
-          name="password"
-          value={formData.password}
-          onChange={handleChange}
-        />
-      </FormControl>
-      <Button
-        type="submit"
-        colorScheme="blue"
-        width="100%"
-        isLoading={loading}
-        loadingText="Logging in..."
-        marginTop="4"
-      >
-        Login
-      </Button>
-      <Text fontSize="sm" marginTop="4">
-        Don't have an account ?{" "}
-      </Text>
+      <form onSubmit={handleSubmit(onSubmit)} style={{ width: "100%" }}>
+        <Stack spacing={4} width="100%">
+          <FormControl isInvalid={errors.username}>
+            <FormLabel>Username</FormLabel>
+            <Input
+              type="text"
+              placeholder="Enter Username"
+              {...register("username", { required: "Username is required" })}
+              width="100%" // Input takes full width of the box
+            />
+            {errors.username && (
+              <Text color="red.500">{errors.username.message}</Text>
+            )}
+          </FormControl>
+
+          <FormControl isInvalid={errors.password}>
+            <FormLabel>Password</FormLabel>
+            <Input
+              type="password"
+              placeholder="Enter Password"
+              {...register("password", { required: "Password is required" })}
+              width="100%" // Input takes full width of the box
+            />
+            {errors.password && (
+              <Text color="red.500">{errors.password.message}</Text>
+            )}
+          </FormControl>
+
+          <Button
+            type="submit"
+            colorScheme="teal"
+            isLoading={loading}
+            width="100%"
+          >
+            Login
+          </Button>
+
+          <Text textAlign="center">
+            Don't have an account?{" "}
+            <Link color="teal.500" onClick={() => navigate("/signup")}>
+              Sign Up
+            </Link>
+          </Text>
+        </Stack>
+      </form>
     </Box>
   );
 };

@@ -90,10 +90,10 @@ export const ProductPageCard = ({ product }) => {
         </Text>
       </VStack>
       <VStack spacing={3} flex="1" p={4} align="center">
-        <Button colorScheme="yellow" w="60%">
+        <Button colorScheme="teal" variant="outline" w="60%">
           Add to Cart
         </Button>
-        <Button colorScheme="blue" w="60%">
+        <Button colorScheme="teal" variant="solid" w="60%">
           Buy Now
         </Button>
       </VStack>
